@@ -3,6 +3,8 @@
 var express = require('express');
 var mongo = require('mongodb');
 var mongoose = require('mongoose');
+var bodyParser = require('body-parser');
+var dns = require('dns');
 
 var cors = require('cors');
 
@@ -18,6 +20,8 @@ app.use(cors());
 
 /** this project needs to parse POST bodies **/
 // you should mount the body-parser here
+app.use(bodyParser.urlencoded({ extended: true }));
+
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -25,13 +29,39 @@ app.get('/', function(req, res){
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
+
+app.post("/api/shorturl/new", (req, res) => {
   
-// your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
+  let original_url = req.body.url.trim();
+  let short_url = 1000;
+  
+  if (!isValidUrl(original_url)) {
+    res.json({
+      error: "invalid URL"
+    }); 
+  }
+  
+  if (!isValidHostname(original_url.split('/')[2])) {
+    res.json({
+      error: "invalid Hostname"
+    }); 
+  }
+  
+  res.json({
+    original_url,
+    short_url
+  });
 });
 
 
 app.listen(port, function () {
   console.log('Node.js listening ...');
 });
+
+const isValidUrl = (url) => /^https?:\/\/[\w\d\-\.]+[\/\w\d\-]*$/i.test(url);
+
+const isValidHostname = (hostname) => { 
+  dns.lookup(hostname, (err, address, family) => {
+    return err.message === 'ENOTFOUND' ? false : true;
+  });
+}
